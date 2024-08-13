@@ -21,7 +21,14 @@ connectToDb((err) => {
 
 
 // routes
+// pagination
 app.get("/books", (req, res) => {
+  // req.query: Đây là một đối tượng chứa các tham số 
+  // truy vấn trong URL của yêu cầu HTTP. Ví dụ, nếu URL là 
+  // http://example.com?page=2, thì req.query 
+  // sẽ là một đối tượng như { page: "2" }
+  const page = req.query.page || 0
+  const booksPerPage = 3
   let books = [];
 
   // giống db.books(trong mongo shell)
@@ -30,6 +37,10 @@ app.get("/books", (req, res) => {
   db.collection("books")
     .find()
     .sort({ author: 1 })
+    // số object được bỏ qua
+    .skip(page * booksPerPage)
+    // giới hạn số object hiển thị
+    .limit(booksPerPage)
     .forEach((book) => books.push(book))
     .then(() => {
       res.status(200).json(books);
@@ -76,6 +87,26 @@ app.delete('/books/:id', (req, res) => {
       })
       .catch(() => {
         res.status(500).json({ error: "Could not delete the document" });
+      });
+  } else {
+    res.status(500).json({ error: "Not a valid doc id" });
+  }
+})
+
+
+// ở đây update nhưng ta lại truyền id qua params 
+// còn chỉnh sửa thì lại nhận data chỉnh sửa qua body
+app.patch('/books/:id', (req, res) => {
+  const updates = req.body
+
+  if (ObjectId.isValid(req.params.id)) {
+    db.collection("books")
+      .updateOne({ _id: new ObjectId(req.params.id)}, {$set: updates})
+      .then((result) => {
+        res.status(200).json(result);
+      })
+      .catch(() => {
+        res.status(500).json({ error: "Could not update the document" });
       });
   } else {
     res.status(500).json({ error: "Not a valid doc id" });
